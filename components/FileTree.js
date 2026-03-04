@@ -1,5 +1,5 @@
-// FileTree — Live-Ansicht der vom AI generierten Dateien (Git-Style)
-// Zeigt Ordnerstruktur mit Datei-Preview (erste 5 Zeilen der zuletzt erstellten Datei)
+// FileTree — Live-Ansicht aller Dateien die waehrend des Deploys entstehen
+// Zeigt Ordnerstruktur mit optionaler Datei-Preview
 
 import { useState, useEffect, useRef } from 'react'
 import { Skeleton } from './Skeleton'
@@ -32,6 +32,18 @@ function buildTree(fileChanges) {
 
   return root
 }
+
+// Gesamtanzahl Dateien in einem Knoten (rekursiv)
+function countFiles(node) {
+  let count = node.files.length
+  for (const child of Object.values(node.children)) {
+    count += countFiles(child)
+  }
+  return count
+}
+
+// Schwellwert: Ordner mit mehr als 50 Dateien werden zugeklappt
+const LARGE_FOLDER_THRESHOLD = 50
 
 // Ordner-Icon (SVG)
 function FolderIcon({ open }) {
@@ -66,7 +78,9 @@ function FileIcon({ name }) {
 
 // Einzelner Ordner-Knoten (rekursiv)
 function TreeNode({ node, depth = 0, expandedFile, onFileClick, latestFile }) {
-  const [open, setOpen] = useState(true)
+  const totalFiles = node.name ? countFiles(node) : 0
+  const isLargeFolder = totalFiles > LARGE_FOLDER_THRESHOLD
+  const [open, setOpen] = useState(!isLargeFolder)
   const dirs = Object.values(node.children).sort((a, b) => a.name.localeCompare(b.name))
   const files = [...node.files].sort((a, b) => a.name.localeCompare(b.name))
   const indent = depth * 16
@@ -82,6 +96,9 @@ function TreeNode({ node, depth = 0, expandedFile, onFileClick, latestFile }) {
           <span className="text-gray-500 text-[10px] w-3">{open ? '▼' : '▶'}</span>
           <FolderIcon open={open} />
           <span className="text-gray-300 text-xs">{node.name}</span>
+          {totalFiles > 0 && (
+            <span className="text-gray-600 text-[10px] ml-1">({totalFiles})</span>
+          )}
         </div>
       )}
       {open && (
@@ -99,25 +116,26 @@ function TreeNode({ node, depth = 0, expandedFile, onFileClick, latestFile }) {
           {files.map(file => {
             const isLatest = file.fullPath === latestFile
             const isExpanded = expandedFile === file.fullPath
+            const hasPreview = !!file.preview
             return (
               <div key={file.fullPath}>
                 <div
-                  className={`flex items-center gap-1.5 py-0.5 px-1 -mx-1 rounded cursor-pointer hover:bg-gray-800/50 ${
-                    isLatest ? 'animate-fade-in' : ''
-                  }`}
+                  className={`flex items-center gap-1.5 py-0.5 px-1 -mx-1 rounded ${
+                    hasPreview ? 'cursor-pointer hover:bg-gray-800/50' : ''
+                  } ${isLatest ? 'animate-fade-in' : ''}`}
                   style={{ paddingLeft: (node.name ? depth + 1 : depth) * 16 }}
-                  onClick={() => onFileClick(file.fullPath)}
+                  onClick={() => hasPreview && onFileClick(file.fullPath)}
                 >
                   <span className="text-green-400 text-[10px] w-3 font-bold">+</span>
                   <FileIcon name={file.name} />
                   <span className={`text-xs truncate ${isLatest ? 'text-green-300' : 'text-gray-300'}`}>
                     {file.name}
                   </span>
-                  {isExpanded && (
+                  {isExpanded && hasPreview && (
                     <span className="text-gray-600 text-[10px] ml-auto">▼</span>
                   )}
                 </div>
-                {isExpanded && file.preview && (
+                {isExpanded && hasPreview && (
                   <pre
                     className="ml-5 mt-0.5 mb-1 p-2 rounded text-[10px] leading-relaxed bg-black/60 border border-gray-700/50 text-green-400/70 whitespace-pre-wrap break-all max-h-24 overflow-hidden"
                     style={{ marginLeft: ((node.name ? depth + 1 : depth) * 16) + 12 }}
@@ -193,10 +211,13 @@ export default function FileTree({ fileChanges = [], isDeploying = false }) {
     ? fileChanges.reduce((a, b) => a.timestamp > b.timestamp ? a : b).path
     : null
 
-  // Auto-expand der neuesten Datei wenn neue hinzukommen
+  // Auto-expand der neuesten Datei wenn neue hinzukommen (nur wenn Preview vorhanden)
   useEffect(() => {
     if (fileChanges.length > prevCountRef.current && latestFile) {
-      setExpandedFile(latestFile)
+      const latest = fileChanges.find(f => f.path === latestFile)
+      if (latest?.preview) {
+        setExpandedFile(latestFile)
+      }
     }
     prevCountRef.current = fileChanges.length
   }, [fileChanges.length, latestFile])
@@ -230,7 +251,7 @@ export default function FileTree({ fileChanges = [], isDeploying = false }) {
       <div ref={containerRef} className="flex-1 overflow-y-auto font-mono text-xs p-3 min-h-0">
         {!hasFiles && isDeploying && <FileTreeSkeleton />}
         {!hasFiles && !isDeploying && (
-          <div className="text-gray-500 text-xs p-2">Keine Dateien generiert</div>
+          <div className="text-gray-500 text-xs p-2">Keine Dateien erstellt</div>
         )}
         {hasFiles && (
           <TreeNode
