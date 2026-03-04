@@ -7,6 +7,10 @@ import ApiKeyField from '../components/settings/ApiKeyField'
 import TwoFactorSection from '../components/settings/TwoFactorSection'
 
 export default function Settings() {
+  // Dashboard Update
+  const [updateLoading, setUpdateLoading] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState({ type: '', text: '' })
+
   // Passwort aendern
   const [newPassword, setNewPassword] = useState('')
   const [currentPasswordForChange, setCurrentPasswordForChange] = useState('')
@@ -42,6 +46,25 @@ export default function Settings() {
         if (data.aiAgentMode) setAiAgentMode(data.aiAgentMode)
       })
   }, [])
+
+  const handleDashboardUpdate = async () => {
+    setUpdateLoading(true)
+    setUpdateMessage({ type: '', text: '' })
+    try {
+      const res = await fetch('/api/dashboard-update', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setUpdateMessage({ type: 'success', text: 'Update gestartet — Seite wird in wenigen Sekunden neu geladen...' })
+        // Nach Neustart der App automatisch neu laden
+        setTimeout(() => window.location.reload(), 15000)
+      } else {
+        setUpdateMessage({ type: 'error', text: data.error || 'Update fehlgeschlagen' })
+      }
+    } catch {
+      setUpdateMessage({ type: 'error', text: 'Verbindungsfehler' })
+    }
+    setUpdateLoading(false)
+  }
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
@@ -208,6 +231,21 @@ export default function Settings() {
               {passwordLoading ? 'Speichert...' : 'Passwort ändern'}
             </button>
           </form>
+        </div>
+
+        {/* Dashboard Update */}
+        <div className="bento-card p-4 sm:p-6 mb-4">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Dashboard Update</h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Aktualisiert das Dashboard vom GitHub-Repository (git pull, build, Service-Neustart).
+          </p>
+          {updateMessage.text && (
+            <p className={`mb-4 ${updateMessage.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{updateMessage.text}</p>
+          )}
+          <button onClick={handleDashboardUpdate} disabled={updateLoading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 px-6 py-3 rounded-lg font-medium">
+            {updateLoading ? 'Update läuft...' : 'Dashboard aktualisieren'}
+          </button>
         </div>
 
         {/* 2FA */}
