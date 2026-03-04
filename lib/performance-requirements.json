@@ -1,0 +1,62 @@
+{
+  "categories": {
+    "ssl": {
+      "name": "SSL / HTTPS",
+      "checks": [
+        { "id": "ssl-cert", "name": "SSL-Zertifikat" },
+        { "id": "https-redirect", "name": "HTTP → HTTPS Redirect" }
+      ]
+    },
+    "icons": {
+      "name": "Icons & Manifest",
+      "checks": [
+        { "id": "favicon", "name": "Favicon", "generatable": true },
+        { "id": "apple-touch-icon", "name": "Apple Touch Icon", "generatable": true },
+        { "id": "manifest", "name": "Web App Manifest", "generatable": true }
+      ]
+    },
+    "meta": {
+      "name": "Meta-Tags",
+      "checks": [
+        { "id": "html-lang", "name": "HTML lang-Attribut", "generatable": true },
+        { "id": "charset", "name": "Charset", "generatable": true },
+        { "id": "viewport", "name": "Viewport", "generatable": true },
+        { "id": "title", "name": "Title-Tag", "generatable": true },
+        { "id": "description", "name": "Meta Description", "generatable": true },
+        { "id": "og-tags", "name": "Open Graph", "generatable": true },
+        { "id": "og-image", "name": "OG Image" }
+      ]
+    },
+    "legal": {
+      "name": "Rechtliches",
+      "checks": [
+        { "id": "impressum", "name": "Impressum", "generatable": true },
+        { "id": "datenschutz", "name": "Datenschutz", "generatable": true }
+      ]
+    },
+    "cookie": {
+      "name": "Cookie / DSGVO",
+      "checks": [
+        { "id": "cookie-consent", "name": "Cookie-Consent", "skipDev": true }
+      ]
+    },
+    "security": {
+      "name": "Security Headers",
+      "checks": [
+        { "id": "x-content-type-options", "name": "X-Content-Type-Options" },
+        { "id": "x-frame-options", "name": "X-Frame-Options" },
+        { "id": "hsts", "name": "HSTS" },
+        { "id": "referrer-policy", "name": "Referrer-Policy" }
+      ]
+    },
+    "seo": {
+      "name": "SEO Basics",
+      "checks": [
+        { "id": "robots-txt", "name": "robots.txt", "generatable": true },
+        { "id": "sitemap", "name": "Sitemap", "generatable": true },
+        { "id": "h1-tag", "name": "H1-Tag", "generatable": true },
+        { "id": "canonical", "name": "Canonical URL", "generatable": true }
+      ]
+    }
+  }
+}
