@@ -65,15 +65,6 @@ Git Push → Gitea → Webhook:9000 (HMAC-SHA256)
 
 </details>
 
-## Setup
-
-```bash
-# 1. Server provisionieren (als root)
-bash install.sh
-
-# 2. Dashboard deployen (lokal)
-./deploy.sh
-```
 
 ## Struktur
 
