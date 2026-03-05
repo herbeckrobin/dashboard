@@ -14,7 +14,13 @@ const STEPS = [
   { id: 'done', label: 'Fertig' },
 ]
 
-export default function EmailSetupPage() {
+export async function getServerSideProps() {
+  const { getDomainConfig } = await import('../../../lib/config.js')
+  const { webmailUrl, mailDomain } = getDomainConfig()
+  return { props: { webmailUrl, mailDomain } }
+}
+
+export default function EmailSetupPage({ webmailUrl, mailDomain }) {
   const router = useRouter()
   const { domain } = router.query
   const [step, setStep] = useState(0)
@@ -258,14 +264,14 @@ export default function EmailSetupPage() {
           </div>
 
           <h3 className="text-sm font-medium text-gray-300 mb-3">Verbindungseinstellungen:</h3>
-          <ConnectionInfo email={createdEmail} />
+          <ConnectionInfo email={createdEmail} mailDomain={mailDomain} />
 
           <div className="flex gap-3 mt-6">
             <button onClick={() => router.push(`/email/${domain}`)}
               className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
               Domain verwalten
             </button>
-            <a href="https://webmail.rhdemo.de" target="_blank" rel="noopener noreferrer"
+            <a href={webmailUrl} target="_blank" rel="noopener noreferrer"
               className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
               Webmail oeffnen
             </a>

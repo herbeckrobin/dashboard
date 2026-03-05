@@ -1,9 +1,19 @@
 // Git Clone URLs mit Kopier-Buttons (SSH + HTTPS)
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-export default function GitCloneBox({ repo }) {
+export default function GitCloneBox({ repo, serverDomain = '', gitDomain = '' }) {
   const [copied, setCopied] = useState('')
+  const [domains, setDomains] = useState({ serverDomain, gitDomain })
+
+  // Domain-Config laden falls nicht als Props uebergeben
+  useEffect(() => {
+    if (!serverDomain && !gitDomain) {
+      fetch('/api/config').then(r => r.json()).then(d => {
+        setDomains({ serverDomain: d.serverDomain || '', gitDomain: d.gitDomain || '' })
+      }).catch(() => {})
+    }
+  }, [])
 
   const copyToClipboard = (text, key) => {
     navigator.clipboard.writeText(text)
@@ -13,8 +23,10 @@ export default function GitCloneBox({ repo }) {
 
   if (!repo) return null
 
-  const sshUrl = `ssh://git@rhdemo.de:222/${repo}.git`
-  const httpsUrl = `https://git.rhdemo.de/${repo}.git`
+  const sd = serverDomain || domains.serverDomain || 'example.de'
+  const gd = gitDomain || domains.gitDomain || `git.${sd}`
+  const sshUrl = `ssh://git@${sd}:222/${repo}.git`
+  const httpsUrl = `https://${gd}/${repo}.git`
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 sm:p-6">

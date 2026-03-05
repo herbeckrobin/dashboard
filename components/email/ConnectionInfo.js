@@ -2,29 +2,29 @@
 
 import { useState } from 'react'
 
-const SETTINGS = [
-  {
-    title: 'Eingehend (IMAP)',
-    rows: [
-      { label: 'Server', value: 'mail.rhdemo.de' },
-      { label: 'Port', value: '993' },
-      { label: 'Verschluesselung', value: 'SSL/TLS' },
-    ]
-  },
-  {
-    title: 'Ausgehend (SMTP)',
-    rows: [
-      { label: 'Server', value: 'mail.rhdemo.de' },
-      { label: 'Port', value: '587' },
-      { label: 'Verschluesselung', value: 'STARTTLS' },
-    ]
-  }
-]
-
-export default function ConnectionInfo({ email }) {
+export default function ConnectionInfo({ email, mailDomain = '' }) {
   const [copied, setCopied] = useState(false)
 
-  const allText = SETTINGS.map(s =>
+  const settings = [
+    {
+      title: 'Eingehend (IMAP)',
+      rows: [
+        { label: 'Server', value: mailDomain || 'mail.example.de' },
+        { label: 'Port', value: '993' },
+        { label: 'Verschluesselung', value: 'SSL/TLS' },
+      ]
+    },
+    {
+      title: 'Ausgehend (SMTP)',
+      rows: [
+        { label: 'Server', value: mailDomain || 'mail.example.de' },
+        { label: 'Port', value: '587' },
+        { label: 'Verschluesselung', value: 'STARTTLS' },
+      ]
+    }
+  ]
+
+  const allText = settings.map(s =>
     `${s.title}:\n` + s.rows.map(r => `  ${r.label}: ${r.value}`).join('\n')
   ).join('\n\n') + `\n\nBenutzername: ${email || 'benutzer@domain.de'}`
 
@@ -37,7 +37,7 @@ export default function ConnectionInfo({ email }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {SETTINGS.map(section => (
+        {settings.map(section => (
           <div key={section.title} className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/50">
             <h4 className="text-sm font-medium text-white mb-3">{section.title}</h4>
             <dl className="space-y-2">

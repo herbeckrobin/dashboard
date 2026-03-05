@@ -29,6 +29,7 @@ export default function NewProject() {
   const [form, setForm] = useState({ name: '', domain: '', type: 'nextjs', framework: null, gitMode: 'theme-only', databaseMode: 'auto', database: { name: '', user: '', password: '', host: 'localhost' }, aiDescription: '' })
   const [aiConfigured, setAiConfigured] = useState(false)
   const [aiCostHint, setAiCostHint] = useState('')
+  const [serverDomain, setServerDomain] = useState('')
   const [deploying, setDeploying] = useState(false)
   const [error, setError] = useState('')
 
@@ -50,6 +51,7 @@ export default function NewProject() {
     fetch('/api/groups').then(r => r.json()).then(d => setGroups(d.groups || [])).catch(() => {})
     fetch('/api/config').then(r => r.json()).then(d => {
       if (d.aiApiKey) setAiConfigured(true)
+      if (d.serverDomain) setServerDomain(d.serverDomain)
       const models = d.aiModels?.[d.aiProvider || 'anthropic'] || []
       const activeModel = models.find(m => m.id === d.aiModel) || models[0]
       if (activeModel) setAiCostHint(`${activeModel.label} ${activeModel.cost}`)
@@ -79,7 +81,7 @@ export default function NewProject() {
 
   const handleSelectRepo = (repo) => {
     setSelectedRepo(repo)
-    setForm({ ...form, name: repo.name, domain: `${repo.name}.rhdemo.de` })
+    setForm({ ...form, name: repo.name, domain: serverDomain ? `${repo.name}.${serverDomain}` : repo.name })
     setShowCreateRepo(false)
   }
 
@@ -477,7 +479,7 @@ export default function NewProject() {
                 <input type="text" value={form.name}
                   onChange={e => {
                     const name = e.target.value
-                    setForm({ ...form, name, domain: name ? `${name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}.rhdemo.de` : '' })
+                    setForm({ ...form, name, domain: name ? `${name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}${serverDomain ? '.' + serverDomain : ''}` : '' })
                   }}
                   placeholder="mein-projekt" required
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500" />
@@ -485,7 +487,7 @@ export default function NewProject() {
               <div>
                 <label className="block text-sm font-medium mb-2">Domain</label>
                 <input type="text" value={form.domain} onChange={e => setForm({...form, domain: e.target.value})}
-                  placeholder="mein-projekt.rhdemo.de" required
+                  placeholder={serverDomain ? `mein-projekt.${serverDomain}` : 'mein-projekt.example.de'} required
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500" />
                 <p className="text-gray-500 text-sm mt-1">Subdomain oder eigene Domain</p>
               </div>

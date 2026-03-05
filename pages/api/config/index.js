@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
   if (req.method === 'GET') {
     const config = getConfig()
-    return res.json({ giteaToken: config.giteaToken || '', pageSpeedApiKey: config.pageSpeedApiKey || '', aiProvider: config.aiProvider || 'anthropic', aiApiKey: config.aiApiKey || '', aiModel: config.aiModel || '', aiAgentMode: config.aiAgentMode || false, aiModels: AI_MODELS })
+    return res.json({ giteaToken: config.giteaToken || '', pageSpeedApiKey: config.pageSpeedApiKey || '', aiProvider: config.aiProvider || 'anthropic', aiApiKey: config.aiApiKey || '', aiModel: config.aiModel || '', aiAgentMode: config.aiAgentMode || false, aiModels: AI_MODELS, serverDomain: config.serverDomain || '', gitDomain: config.gitDomain || '', mailDomain: config.mailDomain || '', adminDomain: config.adminDomain || '', webmailUrl: config.webmailUrl || '' })
   }
 
   if (req.method === 'POST') {

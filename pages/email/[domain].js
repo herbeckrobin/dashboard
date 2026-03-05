@@ -12,7 +12,13 @@ import ConnectionInfo from '../../components/email/ConnectionInfo'
 import MailQueue from '../../components/email/MailQueue'
 import { useBreadcrumbs } from '../../hooks/useBreadcrumbs'
 
-export default function EmailDomainPage() {
+export async function getServerSideProps() {
+  const { getDomainConfig } = await import('../../lib/config.js')
+  const { webmailUrl, mailDomain } = getDomainConfig()
+  return { props: { webmailUrl, mailDomain } }
+}
+
+export default function EmailDomainPage({ webmailUrl, mailDomain }) {
   const router = useRouter()
   const { domain } = router.query
 
@@ -186,7 +192,7 @@ export default function EmailDomainPage() {
             <span className="text-xs bg-red-600/20 text-red-400 px-2 py-1 rounded">Deaktiviert</span>
           )}
         </div>
-        <a href="https://webmail.rhdemo.de" target="_blank" rel="noopener noreferrer"
+        <a href={webmailUrl} target="_blank" rel="noopener noreferrer"
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">
           Webmail oeffnen
         </a>
@@ -250,7 +256,7 @@ export default function EmailDomainPage() {
 
         {/* Verbindungsinfo */}
         <CollapsibleSection title="Verbindungsinfo" defaultOpen={false}>
-          <ConnectionInfo email={accounts[0]?.email} />
+          <ConnectionInfo email={accounts[0]?.email} mailDomain={mailDomain} />
         </CollapsibleSection>
 
         {/* Einstellungen */}

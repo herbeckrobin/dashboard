@@ -21,6 +21,7 @@ export default function EditProject() {
   const [projectData, setProjectData] = useState(null)
   const [reinstalling, setReinstalling] = useState(false)
   const [groups, setGroups] = useState([])
+  const [serverDomain, setServerDomain] = useState('')
 
   // Breadcrumb mit Projektname setzen
   useBreadcrumbs([{ label: form.name || 'Projekt', href: null }])
@@ -59,6 +60,7 @@ export default function EditProject() {
       .catch(() => {})
 
     fetch('/api/groups').then(r => r.json()).then(d => setGroups(d.groups || [])).catch(() => {})
+    fetch('/api/config').then(r => r.json()).then(d => { if (d.serverDomain) setServerDomain(d.serverDomain) }).catch(() => {})
   }, [id])
 
   const handleSubmit = async (e) => {
@@ -101,8 +103,8 @@ export default function EditProject() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Domain</label>
                   <input type="text" value={form.domain} onChange={e => setForm({...form, domain: e.target.value})}
-                    placeholder="example.rhdemo.de" className="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                  {form.domain && !form.domain.endsWith('.rhdemo.de') && (
+                    placeholder={serverDomain ? `example.${serverDomain}` : 'example.de'} className="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                  {form.domain && serverDomain && !form.domain.endsWith(`.${serverDomain}`) && (
                     <label className="flex items-center gap-2 cursor-pointer mt-2">
                       <input type="checkbox" checked={form.wwwAlias}
                         onChange={e => setForm({...form, wwwAlias: e.target.checked})}
