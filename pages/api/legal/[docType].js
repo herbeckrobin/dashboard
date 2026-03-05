@@ -1,11 +1,11 @@
-// API-Endpoint: Rechtliche Dokumente als druckoptimiertes HTML
+// API-Endpoint: Rechtliche Dokumente als PDF-Download
 // GET /api/legal/avv?projectId=123
 // GET /api/legal/tom?projectId=123
 // GET /api/legal/backup?projectId=123
 
 import { requireAuth } from '../../../lib/auth.js'
 import { getProject } from '../../../lib/db.js'
-import { getLegalDoc, renderLegalHtml, buildPrintPage } from '../../../lib/legal-docs.js'
+import { generatePdf } from '../../../lib/legal-docs.js'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -24,16 +24,18 @@ export default async function handler(req, res) {
   const project = getProject(projectId)
   if (!project) return res.status(404).json({ error: 'Projekt nicht gefunden' })
 
-  const doc = getLegalDoc(docType)
-  if (!doc) return res.status(404).json({ error: 'Dokument-Template nicht gefunden' })
+  try {
+    const result = await generatePdf(docType, project.domain)
+    if (!result) return res.status(404).json({ error: 'Dokument-Template nicht gefunden' })
 
-  const datum = new Date().toLocaleDateString('de-DE', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  })
+    const filename = `${docType}-${project.domain}.pdf`
 
-  const contentHtml = renderLegalHtml(doc.markdown)
-  const html = buildPrintPage(doc.title, project.domain, datum, contentHtml)
-
-  res.setHeader('Content-Type', 'text/html; charset=utf-8')
-  res.send(html)
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Length', result.buffer.length)
+    res.send(result.buffer)
+  } catch (err) {
+    console.error('PDF-Generierung fehlgeschlagen:', err.message)
+    res.status(500).json({ error: 'PDF-Generierung fehlgeschlagen' })
+  }
 }

@@ -10,6 +10,48 @@ import EnvVars from '../../components/EnvVars'
 import CollapsibleSection from '../../components/CollapsibleSection'
 import { useBreadcrumbs } from '../../hooks/useBreadcrumbs'
 
+function LegalDocButton({ doc, projectId }) {
+  const [loading, setLoading] = useState(false)
+
+  const handleDownload = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/legal/${doc.type}?projectId=${projectId}`)
+      if (!res.ok) throw new Error('Download fehlgeschlagen')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || `${doc.type}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('PDF-Download fehlgeschlagen: ' + e.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <button onClick={handleDownload} disabled={loading}
+      className="flex items-center gap-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg px-4 py-3 transition-colors text-left w-full">
+      {loading ? (
+        <svg className="w-5 h-5 text-blue-400 flex-shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+      )}
+      <div>
+        <div className="font-medium text-sm">{doc.title}</div>
+        <div className="text-gray-500 text-xs">{loading ? 'PDF wird generiert...' : doc.desc}</div>
+      </div>
+    </button>
+  )
+}
+
 export default function EditProject() {
   const router = useRouter()
   const { id } = router.query
@@ -383,7 +425,7 @@ export default function EditProject() {
           {id && (
             <CollapsibleSection title="Rechtliche Dokumente" defaultOpen={false}>
               <p className="text-gray-400 text-sm mb-3">
-                DSGVO-Dokumente für dieses Projekt. Öffnet eine druckoptimierte Ansicht zum Speichern als PDF.
+                DSGVO-Dokumente als PDF herunterladen.
               </p>
               <div className="grid gap-2">
                 {[
@@ -391,16 +433,7 @@ export default function EditProject() {
                   { type: 'tom', title: 'Technische & organisatorische Maßnahmen (TOM)', desc: 'Maßnahmen gemäß Art. 32 DS-GVO' },
                   { type: 'backup', title: 'Backup-Konzept', desc: 'Datensicherungsstrategie und Wiederherstellung' }
                 ].map(doc => (
-                  <a key={doc.type} href={`/api/legal/${doc.type}?projectId=${id}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 bg-gray-700 hover:bg-gray-600 rounded-lg px-4 py-3 transition-colors">
-                    <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                    </svg>
-                    <div>
-                      <div className="font-medium text-sm">{doc.title}</div>
-                      <div className="text-gray-500 text-xs">{doc.desc}</div>
-                    </div>
-                  </a>
+                  <LegalDocButton key={doc.type} doc={doc} projectId={id} />
                 ))}
               </div>
             </CollapsibleSection>
