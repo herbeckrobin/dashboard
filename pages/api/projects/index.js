@@ -4,6 +4,7 @@ import { deployProject, getNextPort } from '../../../lib/deploy'
 import { generateDbCredentials } from '../../../lib/database'
 import { getLatestScore } from '../../../lib/performance'
 import { checkProjectCreationLimit, checkDomainLimit } from '../../../lib/limits'
+import { validateProjectName, validateDomain } from '../../../lib/validate'
 
 const FRAMEWORK_CONFIG = {
   wordpress: { type: 'php', needsDb: true },
@@ -20,11 +21,14 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const groups = getGroups()
     const groupMap = Object.fromEntries(groups.map(g => [g.id, g]))
-    const projects = getProjects().map(p => ({
-      ...p,
-      groupName: p.groupId ? groupMap[p.groupId]?.name : null,
-      performanceScore: p.performanceCheckEnabled !== false ? getLatestScore(p.id) : null
-    }))
+    const projects = getProjects().map(p => {
+      const { database, envVars, ...safe } = p
+      return {
+        ...safe,
+        groupName: p.groupId ? groupMap[p.groupId]?.name : null,
+        performanceScore: p.performanceCheckEnabled !== false ? getLatestScore(p.id) : null
+      }
+    })
     return res.json({ projects })
   }
 
@@ -35,6 +39,12 @@ export default async function handler(req, res) {
     if (!name || !domain || !repo) {
       return res.status(400).json({ error: 'Name, Domain und Repo sind erforderlich' })
     }
+
+    // Eingabe-Validierung
+    const nameCheck = validateProjectName(name)
+    if (!nameCheck.valid) return res.status(400).json({ error: nameCheck.error })
+    const domainCheck = validateDomain(domain)
+    if (!domainCheck.valid) return res.status(400).json({ error: domainCheck.error })
 
     // Gruppen-Limit pruefen (HARD)
     if (groupId) {

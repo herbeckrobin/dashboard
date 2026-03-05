@@ -71,7 +71,7 @@ export default function EditProject() {
   useEffect(() => {
     if (!id) return
 
-    fetch(`/api/projects/${id}`)
+    fetch(`/api/projects/${id}?edit=true`)
       .then(res => res.json())
       .then(data => {
         if (data.project) {

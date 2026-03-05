@@ -4,6 +4,7 @@ import { getConfig } from '../../../../lib/config'
 import { runCommand } from '../../../../lib/run-command'
 import { dropDatabase } from '../../../../lib/database'
 import { deletePerformanceData } from '../../../../lib/performance'
+import { validateProjectName, validateDomain, validatePreBuildCmd, escapeShellArg } from '../../../../lib/validate'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -13,6 +14,13 @@ export default async function handler(req, res) {
     const project = getProject(id)
     if (!project) {
       return res.status(404).json({ error: 'Projekt nicht gefunden' })
+    }
+    // Sensible Daten nur bei edit=true zurueckgeben (fuer Edit-Formular)
+    if (req.query.edit !== 'true') {
+      const safe = { ...project }
+      if (safe.database) safe.database = { ...safe.database, password: undefined }
+      if (safe.envVars) safe.envVars = safe.envVars.map(e => ({ key: e.key, value: '***' }))
+      return res.json({ project: safe })
     }
     return res.json({ project })
   }
@@ -25,8 +33,14 @@ export default async function handler(req, res) {
 
     const { name, domain, type, repo, gitSubPath, uploadLimit, phpVersion, docRoot, frameworkInstalled, envVars, preBuildCmd, wwwAlias, performanceCheckEnabled, groupId } = req.body
     const updates = {}
-    if (name !== undefined) updates.name = name
+    if (name !== undefined) {
+      const nameCheck = validateProjectName(name)
+      if (!nameCheck.valid) return res.status(400).json({ error: nameCheck.error })
+      updates.name = name
+    }
     if (domain !== undefined) {
+      const domainCheck = validateDomain(domain)
+      if (!domainCheck.valid) return res.status(400).json({ error: domainCheck.error })
       // Alte Domain merken fuer Cleanup beim naechsten Deploy
       if (domain !== project.domain) {
         updates.previousDomain = project.domain
@@ -45,7 +59,14 @@ export default async function handler(req, res) {
         ? envVars.filter(e => e.key && typeof e.key === 'string').map(e => ({ key: e.key.trim(), value: String(e.value || '') }))
         : []
     }
-    if (preBuildCmd !== undefined) updates.preBuildCmd = typeof preBuildCmd === 'string' ? preBuildCmd.trim() : ''
+    if (preBuildCmd !== undefined) {
+      const trimmedCmd = typeof preBuildCmd === 'string' ? preBuildCmd.trim() : ''
+      if (trimmedCmd) {
+        const cmdCheck = validatePreBuildCmd(trimmedCmd)
+        if (!cmdCheck.valid) return res.status(400).json({ error: cmdCheck.error })
+      }
+      updates.preBuildCmd = trimmedCmd
+    }
     if (wwwAlias !== undefined) updates.wwwAlias = !!wwwAlias
     if (performanceCheckEnabled !== undefined) {
       updates.performanceCheckEnabled = !!performanceCheckEnabled
@@ -69,11 +90,13 @@ export default async function handler(req, res) {
 
     const { name, domain, type } = project
     const { deleteRepo } = req.body || {}
+    const safeName = escapeShellArg(name)
+    const safeDomain = escapeShellArg(domain)
     const projectPath = `/home/deploy/apps/${name}`
 
     // 1. PM2 Prozess stoppen + Port freigeben (nur Node/Next.js)
     if (type === 'nextjs' || type === 'node') {
-      await runCommand(`pm2 delete ${name} 2>/dev/null; pm2 save`)
+      await runCommand(`pm2 delete ${safeName} 2>/dev/null; pm2 save`)
       // Sicherheitshalber Prozess auf dem Port killen (falls nicht via PM2 verwaltet)
       if (project.port) {
         await runCommand(`fuser -k ${project.port}/tcp 2>/dev/null || true`)
@@ -81,11 +104,11 @@ export default async function handler(req, res) {
     }
 
     // 2. nginx Config entfernen
-    await runCommand(`sudo rm -f /etc/nginx/sites-enabled/${domain} /etc/nginx/sites-available/${domain}`)
+    await runCommand(`sudo rm -f /etc/nginx/sites-enabled/${safeDomain} /etc/nginx/sites-available/${safeDomain}`)
     await runCommand(`sudo nginx -t && sudo systemctl reload nginx`)
 
     // 3. App-Verzeichnis loeschen
-    await runCommand(`rm -rf ${projectPath}`)
+    await runCommand(`rm -rf ${escapeShellArg(projectPath)}`)
 
     // 4. Optional: Gitea Repo loeschen
     if (deleteRepo && project.repo) {
