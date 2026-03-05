@@ -5,6 +5,7 @@ import fs from 'fs'
 import dns from 'dns'
 import { getProjects, updateProject } from '../../lib/db'
 import { runCommand } from '../../lib/run-command'
+import { getAdminEmail } from '../../lib/config'
 
 async function getServerIp() {
   const result = await runCommand("ip -4 addr show | grep 'inet ' | grep -v '127.0.0' | grep -v '172.' | awk '{print $2}' | cut -d/ -f1 | head -1")
@@ -13,7 +14,7 @@ async function getServerIp() {
 
 async function activateSSL(domain, certDomains, id, updates, subject, body) {
   const certResult = await runCommand(
-    `sudo certbot --nginx --expand ${certDomains} --non-interactive --agree-tos --email info@robinherbeck.com`
+    `sudo certbot --nginx --expand ${certDomains} --non-interactive --agree-tos --email ${getAdminEmail()}`
   )
   if (!certResult.success) return { status: 'certbot-failed', error: certResult.error }
 
@@ -27,7 +28,7 @@ async function activateSSL(domain, certDomains, id, updates, subject, body) {
 
   // Mail senden
   const mailContent = [
-    'To: info@robinherbeck.com',
+    `To: ${getAdminEmail()}`,
     `Subject: ${subject}`,
     'Content-Type: text/plain; charset=utf-8',
     '',
