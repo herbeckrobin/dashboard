@@ -2,6 +2,7 @@ import { requireAuth } from '../../../../lib/auth'
 import fs from 'fs'
 import { getProject, updateProject } from '../../../../lib/db'
 import { runCommand } from '../../../../lib/run-command'
+import { escapeShellArg } from '../../../../lib/validate'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -36,17 +37,17 @@ export default async function handler(req, res) {
 
       // htpasswd erstellen via temp-Datei + sudo mv
       const tmpHtpasswd = `/tmp/htpasswd-${project.domain}`
-      const htResult = await runCommand(`htpasswd -cb ${tmpHtpasswd} user "${password.replace(/"/g, '\\"')}"`)
+      const htResult = await runCommand(`htpasswd -cb ${escapeShellArg(tmpHtpasswd)} user ${escapeShellArg(password)}`)
       if (!htResult.success) {
         return res.status(500).json({ error: 'Fehler beim Erstellen der htpasswd: ' + htResult.error })
       }
-      const mvResult = await runCommand(`sudo mv ${tmpHtpasswd} ${htpasswdPath}`)
+      const mvResult = await runCommand(`sudo mv ${escapeShellArg(tmpHtpasswd)} ${escapeShellArg(htpasswdPath)}`)
       if (!mvResult.success) {
         return res.status(500).json({ error: 'Fehler beim Verschieben der htpasswd: ' + mvResult.error })
       }
     } else {
       // htpasswd entfernen
-      await runCommand(`sudo rm -f ${htpasswdPath}`)
+      await runCommand(`sudo rm -f ${escapeShellArg(htpasswdPath)}`)
     }
 
     // nginx config aktualisieren
@@ -80,7 +81,7 @@ async function updateNginxWithAuth(domain, enabled) {
   const configPath = `/etc/nginx/sites-available/${domain}`
 
   // Aktuelle Config lesen
-  const readResult = await runCommand(`sudo cat ${configPath}`)
+  const readResult = await runCommand(`sudo cat ${escapeShellArg(configPath)}`)
   if (!readResult.success) return readResult
 
   let config = readResult.output
@@ -102,5 +103,5 @@ async function updateNginxWithAuth(domain, enabled) {
   // Config schreiben via temp-Datei + sudo mv
   const tmpPath = `/tmp/nginx-${domain}.conf`
   fs.writeFileSync(tmpPath, config)
-  return await runCommand(`sudo mv ${tmpPath} ${configPath}`)
+  return await runCommand(`sudo mv ${escapeShellArg(tmpPath)} ${escapeShellArg(configPath)}`)
 }

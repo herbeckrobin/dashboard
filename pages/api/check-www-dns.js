@@ -6,6 +6,7 @@ import dns from 'dns'
 import { getProjects, updateProject } from '../../lib/db'
 import { runCommand } from '../../lib/run-command'
 import { getAdminEmail } from '../../lib/config'
+import { escapeShellArg } from '../../lib/validate'
 
 async function getServerIp() {
   const result = await runCommand("ip -4 addr show | grep 'inet ' | grep -v '127.0.0' | grep -v '172.' | awk '{print $2}' | cut -d/ -f1 | head -1")
@@ -20,7 +21,7 @@ async function activateSSL(domain, certDomains, id, updates, subject, body) {
 
   // HTTP/2 aktivieren
   await runCommand(
-    `sudo sed -i 's/listen 443 ssl;/listen 443 ssl http2;/g' /etc/nginx/sites-available/${domain} && sudo nginx -t && sudo systemctl reload nginx`
+    `sudo sed -i 's/listen 443 ssl;/listen 443 ssl http2;/g' /etc/nginx/sites-available/${escapeShellArg(domain)} && sudo nginx -t && sudo systemctl reload nginx`
   )
 
   // Flags aktualisieren
