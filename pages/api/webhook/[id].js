@@ -1,3 +1,4 @@
+import { requireAuth } from '../../../lib/auth'
 import { getProject, updateProject } from '../../../lib/db'
 import { deployProject } from '../../../lib/deploy'
 
@@ -5,6 +6,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  // Auth prüfen (erlaubt X-Internal-Token vom Webhook-Server + Session)
+  if (!await requireAuth(req, res)) return
 
   const { id } = req.query
   const project = getProject(id)

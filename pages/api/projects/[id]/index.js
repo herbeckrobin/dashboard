@@ -116,8 +116,9 @@ export default async function handler(req, res) {
       const token = config.giteaToken
       if (token) {
         try {
-          const giteaRes = await fetch(`http://localhost:3000/api/v1/repos/${project.repo}?token=${encodeURIComponent(token)}`, {
-            method: 'DELETE'
+          const giteaRes = await fetch(`http://localhost:3000/api/v1/repos/${project.repo}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `token ${token}` }
           })
           if (!giteaRes.ok) {
             const err = await giteaRes.text()

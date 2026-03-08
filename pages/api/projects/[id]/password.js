@@ -16,8 +16,7 @@ export default async function handler(req, res) {
   // GET - Passwort-Status abrufen
   if (req.method === 'GET') {
     return res.json({
-      passwordEnabled: project.passwordEnabled || false,
-      password: project.password || null
+      passwordEnabled: project.passwordEnabled || false
     })
   }
 
@@ -65,7 +64,7 @@ export default async function handler(req, res) {
     // Projekt aktualisieren
     updateProject(id, {
       passwordEnabled: enabled,
-      password: enabled ? password : null
+      password: null
     })
 
     return res.json({

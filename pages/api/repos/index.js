@@ -15,7 +15,8 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/v1/user/repos?limit=50&token=${encodeURIComponent(token)}`
+        `http://localhost:3000/api/v1/user/repos?limit=50`,
+        { headers: { 'Authorization': `token ${token}` } }
       )
 
       if (!response.ok) {
@@ -59,10 +60,10 @@ export default async function handler(req, res) {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/v1/user/repos?token=${encodeURIComponent(token)}`,
+        `http://localhost:3000/api/v1/user/repos`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `token ${token}` },
           body: JSON.stringify({
             name: name.trim(),
             description: description || '',
