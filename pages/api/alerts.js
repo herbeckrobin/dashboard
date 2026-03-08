@@ -3,6 +3,8 @@ import { getProjects } from '../../lib/db'
 import { getLatestScore } from '../../lib/performance'
 import { getSystemInfo, getBackupInfo } from '../../lib/system-info'
 import { getMailQueue } from '../../lib/email/server'
+import { getLastAudit } from '../../lib/rules/storage'
+import { detectDrift } from '../../lib/rules/drift'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -97,6 +99,35 @@ export default async function handler(req, res) {
         alerts.push({ type: 'mail-queue', severity: 'critical', message: `Mail-Queue kritisch: ${mailQueue.length} Nachrichten` })
       }
     } catch {}
+
+    // Security Rules Alerts
+    const lastAudit = getLastAudit()
+    if (lastAudit) {
+      const SEVERITY_MAP = { critical: 'critical', high: 'warning', medium: 'info' }
+      for (const r of lastAudit.results) {
+        if (!r.passed && (r.severity === 'critical' || r.severity === 'high')) {
+          alerts.push({
+            type: 'security-rule',
+            severity: SEVERITY_MAP[r.severity] || 'warning',
+            message: `${r.name}: ${r.actual}`,
+            ruleId: r.ruleId,
+            project: r.projectName || undefined,
+          })
+        }
+      }
+
+      // Drift — passed→failed seit letztem Audit
+      const { drifted } = detectDrift()
+      for (const r of drifted) {
+        alerts.push({
+          type: 'security-drift',
+          severity: 'warning',
+          message: `Verschlechtert: ${r.name}`,
+          ruleId: r.ruleId,
+          project: r.projectName || undefined,
+        })
+      }
+    }
 
     const summary = {
       critical: alerts.filter(a => a.severity === 'critical').length,

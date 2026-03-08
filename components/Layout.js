@@ -47,10 +47,18 @@ const EmailIcon = () => (
   </svg>
 )
 
+const RulesIcon = () => (
+  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+)
+
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: <DashboardIcon /> },
   { href: '/groups', label: 'Gruppen', icon: <GroupsIcon /> },
   { href: '/email', label: 'E-Mail', icon: <EmailIcon /> },
+  { href: '/rules', label: 'Server Rules', icon: <RulesIcon /> },
   { href: '/new', label: 'Neues Projekt', icon: <PlusIcon /> },
   { href: '/settings', label: 'Einstellungen', icon: <SettingsIcon /> },
 ]
@@ -75,6 +83,8 @@ function getBreadcrumbs(router, extra) {
       crumbs.push({ label: 'Gruppen', href: '/groups' })
       crumbs.push({ label: 'Gruppe' })
     }
+  } else if (path === '/rules') {
+    crumbs.push({ label: 'Server Rules' })
   } else if (path === '/email') {
     crumbs.push({ label: 'E-Mail' })
   } else if (path.startsWith('/email/setup/')) {
