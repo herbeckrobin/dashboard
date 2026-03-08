@@ -10,6 +10,10 @@ export default function Settings() {
   // Dashboard Update
   const [updateLoading, setUpdateLoading] = useState(false)
   const [updateMessage, setUpdateMessage] = useState({ type: '', text: '' })
+  const [versionInfo, setVersionInfo] = useState(null)
+  const [versionLoading, setVersionLoading] = useState(true)
+  const [updateSteps, setUpdateSteps] = useState(null)
+  const [checkingForUpdates, setCheckingForUpdates] = useState(false)
 
   // Passwort aendern
   const [newPassword, setNewPassword] = useState('')
@@ -33,6 +37,17 @@ export default function Settings() {
   const pageSpeedSave = useApiSave()
   const aiSave = useApiSave()
 
+  const fetchVersionInfo = async () => {
+    setCheckingForUpdates(true)
+    try {
+      const res = await fetch('/api/dashboard-update')
+      const data = await res.json()
+      if (!data.error) setVersionInfo(data)
+    } catch { /* Server nicht erreichbar */ }
+    setCheckingForUpdates(false)
+    setVersionLoading(false)
+  }
+
   useEffect(() => {
     fetch('/api/config')
       .then(res => res.json())
@@ -45,25 +60,72 @@ export default function Settings() {
         if (data.aiApiKey) setAiApiKey(data.aiApiKey)
         if (data.aiAgentMode) setAiAgentMode(data.aiAgentMode)
       })
+    fetchVersionInfo()
   }, [])
+
+  const pollUpdateStatus = () => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/dashboard-update?status=true')
+        const data = await res.json()
+        if (data.status) {
+          setUpdateSteps(data.status.steps)
+          if (data.status.status === 'done') {
+            clearInterval(interval)
+            setUpdateMessage({ type: 'success', text: 'Update erfolgreich — Seite wird neu geladen...' })
+            waitForRestart()
+          } else if (data.status.status === 'error') {
+            clearInterval(interval)
+            setUpdateMessage({ type: 'error', text: data.status.error || 'Update fehlgeschlagen' })
+            setUpdateLoading(false)
+          }
+        }
+      } catch {
+        // Server evtl. gerade im Neustart — weiter pollen
+      }
+    }, 2000)
+    return interval
+  }
+
+  const waitForRestart = () => {
+    let attempts = 0
+    const maxAttempts = 30
+    const interval = setInterval(async () => {
+      attempts++
+      try {
+        const res = await fetch('/api/config', { method: 'HEAD' })
+        if (res.ok) {
+          clearInterval(interval)
+          window.location.reload()
+        }
+      } catch {
+        // Server noch nicht bereit
+      }
+      if (attempts >= maxAttempts) {
+        clearInterval(interval)
+        setUpdateMessage({ type: 'success', text: 'Update abgeschlossen — bitte Seite manuell neu laden.' })
+        setUpdateLoading(false)
+      }
+    }, 2000)
+  }
 
   const handleDashboardUpdate = async () => {
     setUpdateLoading(true)
     setUpdateMessage({ type: '', text: '' })
+    setUpdateSteps(null)
     try {
       const res = await fetch('/api/dashboard-update', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setUpdateMessage({ type: 'success', text: 'Update gestartet — Seite wird in wenigen Sekunden neu geladen...' })
-        // Nach Neustart der App automatisch neu laden
-        setTimeout(() => window.location.reload(), 15000)
+        pollUpdateStatus()
       } else {
         setUpdateMessage({ type: 'error', text: data.error || 'Update fehlgeschlagen' })
+        setUpdateLoading(false)
       }
     } catch {
       setUpdateMessage({ type: 'error', text: 'Verbindungsfehler' })
+      setUpdateLoading(false)
     }
-    setUpdateLoading(false)
   }
 
   const handleChangePassword = async (e) => {
@@ -235,17 +297,114 @@ export default function Settings() {
 
         {/* Dashboard Update */}
         <div className="bento-card p-4 sm:p-6 mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">Dashboard Update</h2>
-          <p className="text-gray-400 text-sm mb-4">
-            Aktualisiert das Dashboard vom GitHub-Repository (git pull, build, Service-Neustart).
-          </p>
-          {updateMessage.text && (
-            <p className={`mb-4 ${updateMessage.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{updateMessage.text}</p>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold">Dashboard Update</h2>
+            {versionInfo?.current && (
+              <span className="text-xs text-gray-500 font-mono">{versionInfo.current.shortHash}</span>
+            )}
+          </div>
+
+          {/* Versions-Info */}
+          {versionLoading ? (
+            <p className="text-gray-500 text-sm mb-4">Prüfe auf Updates...</p>
+          ) : versionInfo ? (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                {versionInfo.updatesAvailable > 0 ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600/30 text-blue-400">
+                    {versionInfo.updatesAvailable} {versionInfo.updatesAvailable === 1 ? 'Update' : 'Updates'} verfügbar
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-600/30 text-green-400">
+                    Aktuell
+                  </span>
+                )}
+              </div>
+              {versionInfo.current && (
+                <p className="text-gray-500 text-xs">
+                  Aktuelle Version: {versionInfo.current.message} ({new Date(versionInfo.current.date).toLocaleDateString('de-DE')})
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm mb-4">Versions-Info nicht verfügbar</p>
           )}
-          <button onClick={handleDashboardUpdate} disabled={updateLoading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 px-6 py-3 rounded-lg font-medium">
-            {updateLoading ? 'Update läuft...' : 'Dashboard aktualisieren'}
-          </button>
+
+          {/* Changelog */}
+          {versionInfo?.changelog?.length > 0 && !updateLoading && (
+            <div className="mb-4 border border-gray-700 rounded-lg overflow-hidden">
+              <div className="bg-gray-800/50 px-3 py-2 text-xs font-medium text-gray-400">Änderungen</div>
+              <div className="max-h-40 overflow-y-auto">
+                {versionInfo.changelog.map((commit, i) => (
+                  <div key={commit.hash} className={`px-3 py-2 text-sm flex items-start gap-2 ${i > 0 ? 'border-t border-gray-700/50' : ''}`}>
+                    <span className="text-gray-500 font-mono text-xs mt-0.5 shrink-0">{commit.hash}</span>
+                    <span className="text-gray-300">{commit.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fortschritts-Anzeige */}
+          {updateSteps && (
+            <div className="mb-4 space-y-2">
+              {updateSteps.map((step) => (
+                <div key={step.name} className="flex items-center gap-3">
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    {step.status === 'done' && (
+                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {step.status === 'running' && (
+                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {step.status === 'error' && (
+                      <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                    {step.status === 'pending' && (
+                      <div className="w-3 h-3 rounded-full bg-gray-600" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${
+                    step.status === 'running' ? 'text-blue-400' :
+                    step.status === 'done' ? 'text-gray-400' :
+                    step.status === 'error' ? 'text-red-400' : 'text-gray-600'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Fehler-Output */}
+          {updateSteps?.find(s => s.status === 'error')?.output && (
+            <div className="mb-4 bg-red-900/20 border border-red-800/50 rounded-lg p-3">
+              <pre className="text-xs text-red-300 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {updateSteps.find(s => s.status === 'error').output}
+              </pre>
+            </div>
+          )}
+
+          {updateMessage.text && (
+            <p className={`mb-4 text-sm ${updateMessage.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{updateMessage.text}</p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button onClick={handleDashboardUpdate} disabled={updateLoading || (versionInfo && versionInfo.updatesAvailable === 0)}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 px-6 py-3 rounded-lg font-medium transition-colors">
+              {updateLoading ? 'Update läuft...' : versionInfo?.updatesAvailable > 0 ? 'Dashboard aktualisieren' : 'Keine Updates verfügbar'}
+            </button>
+            {!updateLoading && (
+              <button onClick={fetchVersionInfo} disabled={checkingForUpdates}
+                className="text-gray-400 hover:text-white text-sm transition-colors">
+                {checkingForUpdates ? 'Prüfe...' : 'Erneut prüfen'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 2FA */}
