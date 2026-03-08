@@ -4,6 +4,30 @@ import {
   checkRateLimit, recordAttempt, getClientIp,
 } from '../../../lib/auth'
 
+// Bootstrap starten falls noch nicht gelaufen (idempotent, async)
+function triggerBootstrapIfNeeded() {
+  const auth = getAuth()
+  if (auth.bootstrapDone) return
+
+  // Flag sofort setzen um Doppel-Trigger zu vermeiden
+  auth.bootstrapDone = true
+  saveAuth(auth)
+
+  import('../../../lib/rules/index.js').then(({ enforceAll, runAudit }) => {
+    console.log('[BOOTSTRAP] Starte initiales Server-Setup...')
+    enforceAll().then(result => {
+      console.log(`[BOOTSTRAP] Fertig: ${result.enforced} enforced, ${result.skipped} uebersprungen, ${result.failed} fehlgeschlagen`)
+      runAudit({ trigger: 'bootstrap' }).catch(() => {})
+    }).catch(err => {
+      console.error('[BOOTSTRAP] Fehler:', err.message)
+      // Flag zuruecksetzen damit es beim naechsten Login nochmal versucht wird
+      const a = getAuth()
+      a.bootstrapDone = false
+      saveAuth(a)
+    })
+  }).catch(() => {})
+}
+
 function parseCookies(req) {
   const cookie = req.headers.cookie || ''
   const cookies = {}
@@ -64,18 +88,8 @@ export default async function handler(req, res) {
       const jwt = await createSession()
       setSessionCookie(res, jwt)
 
-      // Initial Bootstrap: alle Server-Rules enforcen (async im Hintergrund)
-      // Installiert PHP, MariaDB, Docker, Gitea, E-Mail, Firewall, etc.
-      import('../../../lib/rules/index.js').then(({ enforceAll, runAudit }) => {
-        console.log('[BOOTSTRAP] Starte initiales Server-Setup...')
-        enforceAll().then(result => {
-          console.log(`[BOOTSTRAP] Fertig: ${result.enforced} enforced, ${result.skipped} uebersprungen, ${result.failed} fehlgeschlagen`)
-          // Audit nach Bootstrap fuer Score-Berechnung
-          runAudit({ trigger: 'bootstrap' }).catch(() => {})
-        }).catch(err => {
-          console.error('[BOOTSTRAP] Fehler:', err.message)
-        })
-      }).catch(() => {})
+      // Bootstrap starten
+      triggerBootstrapIfNeeded()
 
       return res.json({ success: true })
     }
@@ -117,6 +131,10 @@ export default async function handler(req, res) {
       // No 2FA - create session directly
       const jwt = await createSession()
       setSessionCookie(res, jwt)
+
+      // Bootstrap starten falls noch nicht gelaufen
+      triggerBootstrapIfNeeded()
+
       return res.json({ success: true })
     }
 
