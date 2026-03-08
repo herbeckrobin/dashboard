@@ -43,9 +43,13 @@ async function activateSSL(domain, certDomains, id, updates, subject, body) {
 }
 
 export default async function handler(req, res) {
-  // Nur lokal aufrufbar (Cron)
+  // Nur lokal aufrufbar (Cron) — Pruefe sowohl Socket-IP als auch X-Real-IP
+  // X-Real-IP wird von nginx gesetzt und zeigt die echte Client-IP
   const remoteIp = req.socket.remoteAddress
-  if (remoteIp !== '127.0.0.1' && remoteIp !== '::1' && remoteIp !== '::ffff:127.0.0.1') {
+  const realIp = req.headers['x-real-ip']
+  const isLocal = (remoteIp === '127.0.0.1' || remoteIp === '::1' || remoteIp === '::ffff:127.0.0.1')
+  // Wenn X-Real-IP gesetzt ist, kommt der Request ueber nginx — dann muss auch die echte IP lokal sein
+  if (!isLocal || (realIp && realIp !== '127.0.0.1' && realIp !== '::1')) {
     return res.status(403).json({ error: 'Nur lokal aufrufbar' })
   }
 

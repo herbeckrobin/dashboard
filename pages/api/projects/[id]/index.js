@@ -4,7 +4,7 @@ import { getConfig } from '../../../../lib/config'
 import { runCommand } from '../../../../lib/run-command'
 import { dropDatabase } from '../../../../lib/database'
 import { deletePerformanceData } from '../../../../lib/performance'
-import { validateProjectName, validateDomain, validatePreBuildCmd, escapeShellArg } from '../../../../lib/validate'
+import { validateProjectName, validateDomain, validatePreBuildCmd, validateGitSubPath, escapeShellArg } from '../../../../lib/validate'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -49,7 +49,11 @@ export default async function handler(req, res) {
     }
     if (type !== undefined) updates.type = type
     if (repo !== undefined) updates.repo = repo
-    if (gitSubPath !== undefined) updates.gitSubPath = gitSubPath
+    if (gitSubPath !== undefined) {
+      const subPathCheck = validateGitSubPath(gitSubPath)
+      if (!subPathCheck.valid) return res.status(400).json({ error: subPathCheck.error })
+      updates.gitSubPath = gitSubPath
+    }
     if (uploadLimit !== undefined) updates.uploadLimit = uploadLimit
     if (phpVersion !== undefined) updates.phpVersion = phpVersion
     if (docRoot !== undefined) updates.docRoot = docRoot

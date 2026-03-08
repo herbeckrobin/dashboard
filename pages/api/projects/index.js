@@ -4,7 +4,7 @@ import { deployProject, getNextPort } from '../../../lib/deploy'
 import { generateDbCredentials } from '../../../lib/database'
 import { getLatestScore } from '../../../lib/performance'
 import { checkProjectCreationLimit, checkDomainLimit } from '../../../lib/limits'
-import { validateProjectName, validateDomain } from '../../../lib/validate'
+import { validateProjectName, validateDomain, validatePreBuildCmd, validateGitSubPath } from '../../../lib/validate'
 
 const FRAMEWORK_CONFIG = {
   wordpress: { type: 'php', needsDb: true },
@@ -45,6 +45,12 @@ export default async function handler(req, res) {
     if (!nameCheck.valid) return res.status(400).json({ error: nameCheck.error })
     const domainCheck = validateDomain(domain)
     if (!domainCheck.valid) return res.status(400).json({ error: domainCheck.error })
+
+    // preBuildCmd validieren (falls beim POST mitgegeben)
+    if (req.body.preBuildCmd) {
+      const cmdCheck = validatePreBuildCmd(req.body.preBuildCmd)
+      if (!cmdCheck.valid) return res.status(400).json({ error: cmdCheck.error })
+    }
 
     // Gruppen-Limit pruefen (HARD)
     if (groupId) {
@@ -89,7 +95,10 @@ export default async function handler(req, res) {
       if (framework === 'wordpress') {
         projectData.gitMode = gitMode || 'theme-only'
         if (gitMode === 'theme-only') {
-          projectData.gitSubPath = `wp-content/themes/${name}`
+          const subPath = `wp-content/themes/${name}`
+          const subPathCheck = validateGitSubPath(subPath)
+          if (!subPathCheck.valid) return res.status(400).json({ error: subPathCheck.error })
+          projectData.gitSubPath = subPath
         }
       }
 

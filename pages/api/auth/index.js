@@ -140,6 +140,16 @@ export default async function handler(req, res) {
 
     // Verify TOTP
     if (action === 'verify-totp') {
+      // Rate-Limiting gegen Brute-Force auf TOTP-Codes
+      const rl = checkRateLimit(ip)
+      if (rl.blocked) {
+        return res.status(429).json({
+          error: `Zu viele Versuche. Bitte ${rl.remainingMinutes} Min. warten.`,
+          blocked: true,
+          remainingMinutes: rl.remainingMinutes,
+        })
+      }
+
       const auth = getAuth()
       if (auth.twoFactor?.type !== 'totp' || !auth.twoFactor?.totpSecret) {
         return res.status(400).json({ error: 'TOTP nicht eingerichtet' })
@@ -147,9 +157,11 @@ export default async function handler(req, res) {
 
       const { verifyTotp } = await import('../../../lib/auth')
       if (!verifyTotp(auth.twoFactor.totpSecret, code)) {
+        recordAttempt(ip, false)
         return res.status(401).json({ error: 'Ungültiger Code' })
       }
 
+      recordAttempt(ip, true)
       const jwt = await createSession()
       setSessionCookie(res, jwt)
       return res.json({ success: true })
@@ -157,6 +169,16 @@ export default async function handler(req, res) {
 
     // Verify Passkey
     if (action === 'verify-passkey') {
+      // Rate-Limiting gegen Brute-Force auf Passkey-Verifizierung
+      const rl = checkRateLimit(ip)
+      if (rl.blocked) {
+        return res.status(429).json({
+          error: `Zu viele Versuche. Bitte ${rl.remainingMinutes} Min. warten.`,
+          blocked: true,
+          remainingMinutes: rl.remainingMinutes,
+        })
+      }
+
       const { getCurrentChallenge, getPasskeys, getRpConfig } = await import('../../../lib/auth')
       const { verifyAuthenticationResponse } = await import('@simplewebauthn/server')
 
@@ -172,6 +194,7 @@ export default async function handler(req, res) {
         const { response: authResponse } = req.body
         const matchingPasskey = passkeys.find(pk => pk.credentialID === authResponse.id)
         if (!matchingPasskey) {
+          recordAttempt(ip, false)
           return res.status(401).json({ error: 'Passkey nicht gefunden' })
         }
 
@@ -188,8 +211,11 @@ export default async function handler(req, res) {
         })
 
         if (!verification.verified) {
+          recordAttempt(ip, false)
           return res.status(401).json({ error: 'Passkey-Verifizierung fehlgeschlagen' })
         }
+
+        recordAttempt(ip, true)
 
         // Update counter
         matchingPasskey.counter = verification.authenticationInfo.newCounter
@@ -200,6 +226,7 @@ export default async function handler(req, res) {
         setSessionCookie(res, jwt)
         return res.json({ success: true })
       } catch (err) {
+        recordAttempt(ip, false)
         return res.status(401).json({ error: 'Passkey-Fehler: ' + err.message })
       }
     }
