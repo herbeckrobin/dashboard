@@ -124,7 +124,7 @@ export default function TwoFactorSection() {
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+    <div className="bento-card p-4 sm:p-6">
       <h2 className="text-lg sm:text-xl font-semibold mb-4">Zwei-Faktor-Authentifizierung</h2>
 
       {/* Status */}
