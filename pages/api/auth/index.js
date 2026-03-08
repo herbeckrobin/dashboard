@@ -63,6 +63,20 @@ export default async function handler(req, res) {
 
       const jwt = await createSession()
       setSessionCookie(res, jwt)
+
+      // Initial Bootstrap: alle Server-Rules enforcen (async im Hintergrund)
+      // Installiert PHP, MariaDB, Docker, Gitea, E-Mail, Firewall, etc.
+      import('../../../lib/rules/index.js').then(({ enforceAll, runAudit }) => {
+        console.log('[BOOTSTRAP] Starte initiales Server-Setup...')
+        enforceAll().then(result => {
+          console.log(`[BOOTSTRAP] Fertig: ${result.enforced} enforced, ${result.skipped} uebersprungen, ${result.failed} fehlgeschlagen`)
+          // Audit nach Bootstrap fuer Score-Berechnung
+          runAudit({ trigger: 'bootstrap' }).catch(() => {})
+        }).catch(err => {
+          console.error('[BOOTSTRAP] Fehler:', err.message)
+        })
+      }).catch(() => {})
+
       return res.json({ success: true })
     }
 
