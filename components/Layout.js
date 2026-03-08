@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useExtraBreadcrumbs } from '../hooks/useBreadcrumbs'
 import TopLoadingBar from './TopLoadingBar'
 import GlobalSearch from './GlobalSearch'
+import BootstrapBanner from './BootstrapBanner'
 
 // SVG Icons
 const DashboardIcon = () => (
@@ -191,6 +192,9 @@ export default function Layout({ children, onLogout }) {
 
       {/* Hauptbereich */}
       <div className="flex-1 min-w-0">
+        {/* Bootstrap-Fortschritt */}
+        <BootstrapBanner />
+
         {/* Top-Bar */}
         <header className="h-14 flex items-center gap-4 px-4 md:px-8 border-b border-gray-700/50 flex-shrink-0">
           {/* Hamburger (Mobile) */}
