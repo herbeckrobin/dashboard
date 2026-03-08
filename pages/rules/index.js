@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
 const CATEGORY_LABELS = {
+  bootstrap: 'Bootstrap',
   setup: 'Setup',
   security: 'Security',
   infra: 'Infrastruktur',
@@ -192,7 +193,7 @@ export default function RulesDashboard() {
       grouped[r.category].push(r)
     }
   }
-  const categoryOrder = ['setup', 'security', 'infra', 'monitoring']
+  const categoryOrder = ['bootstrap', 'setup', 'security', 'infra', 'monitoring']
 
   const failedEnforceable = audit?.results?.filter(r => !r.passed && r.enforceable).length || 0
 
