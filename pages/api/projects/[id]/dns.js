@@ -14,7 +14,8 @@ export default async function handler(req, res) {
     const serverIp = await getServerIp()
     const result = await checkDomainDns(project.domain, {
       serverIp,
-      wwwAlias: project.wwwAlias
+      wwwAlias: project.wwwAlias,
+      fresh: req.query.fresh === 'true'
     })
     res.json(result)
   } catch (err) {

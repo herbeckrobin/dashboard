@@ -64,11 +64,12 @@ export default function DnsCheck({ projectId }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const fetchDns = useCallback(async () => {
+  const fetchDns = useCallback(async (fresh = false) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/dns`)
+      const url = `/api/projects/${projectId}/dns${fresh ? '?fresh=true' : ''}`
+      const res = await fetch(url)
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error || 'Fehler')
@@ -119,7 +120,7 @@ export default function DnsCheck({ projectId }) {
 
       {/* Refresh */}
       <div className="flex justify-end">
-        <button onClick={fetchDns} disabled={loading}
+        <button onClick={() => fetchDns(true)} disabled={loading}
           className="text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-1">
           <svg className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
