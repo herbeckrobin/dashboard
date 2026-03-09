@@ -18,7 +18,19 @@ function QuotaBar({ usedBytes, limitMb }) {
   )
 }
 
-export default function AccountList({ accounts, onEdit, onDelete, onToggle }) {
+function AutoReplyBadge({ autoReply }) {
+  if (!autoReply?.enabled) return null
+  const now = new Date().toISOString().split('T')[0]
+  if (autoReply.startDate && now < autoReply.startDate) {
+    return <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded flex-shrink-0" title={`Geplant ab ${autoReply.startDate}`}>Geplant</span>
+  }
+  if (autoReply.endDate && now > autoReply.endDate) {
+    return <span className="text-xs bg-orange-600/20 text-orange-400 px-2 py-0.5 rounded flex-shrink-0" title={`Abgelaufen seit ${autoReply.endDate}`}>Abgelaufen</span>
+  }
+  return <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded flex-shrink-0">Auto-Reply</span>
+}
+
+export default function AccountList({ accounts, onEdit, onDelete, onToggle, onAutoReply }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   return (
@@ -40,12 +52,14 @@ export default function AccountList({ accounts, onEdit, onDelete, onToggle }) {
             )}
           </div>
 
-          {/* Auto-Reply Badge */}
-          {account.autoReply?.enabled && (
-            <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded flex-shrink-0">
-              Auto-Reply
-            </span>
-          )}
+          {/* Auto-Reply Badge (klickbar) */}
+          <button onClick={() => onAutoReply?.(account)}
+            className="flex-shrink-0" title="Autoresponder konfigurieren">
+            {account.autoReply?.enabled
+              ? <AutoReplyBadge autoReply={account.autoReply} />
+              : <span className="text-xs bg-gray-700/50 text-gray-500 px-2 py-0.5 rounded hover:text-gray-300 transition-colors">Auto-Reply</span>
+            }
+          </button>
 
           {/* Quota */}
           <div className="flex-shrink-0 hidden sm:block">

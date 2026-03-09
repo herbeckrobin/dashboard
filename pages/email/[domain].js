@@ -6,6 +6,7 @@ import Layout from '../../components/Layout'
 import CollapsibleSection from '../../components/CollapsibleSection'
 import AccountList from '../../components/email/AccountList'
 import AccountForm from '../../components/email/AccountForm'
+import AutoResponder from '../../components/email/AutoResponder'
 import AliasForm from '../../components/email/AliasForm'
 import DnsRecords from '../../components/email/DnsRecords'
 import ConnectionInfo from '../../components/email/ConnectionInfo'
@@ -32,6 +33,7 @@ export default function EmailDomainPage({ webmailUrl, mailDomain }) {
   const [savingSettings, setSavingSettings] = useState(false)
   const [dkimGenerating, setDkimGenerating] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [autoReplyAccount, setAutoReplyAccount] = useState(null)
 
   useBreadcrumbs([
     { label: 'E-Mail', href: '/email' },
@@ -99,6 +101,19 @@ export default function EmailDomainPage({ webmailUrl, mailDomain }) {
   // Postfach loeschen
   const handleDeleteAccount = async (account) => {
     await fetch(`/api/email/accounts/${account.id}`, { method: 'DELETE' })
+    fetchData()
+  }
+
+  // Autoresponder speichern
+  const handleSaveAutoReply = async (autoReply) => {
+    const res = await fetch(`/api/email/accounts/${autoReplyAccount.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoReply }),
+    })
+    const result = await res.json()
+    if (result.error) throw new Error(result.error)
+    setAutoReplyAccount(null)
     fetchData()
   }
 
@@ -226,6 +241,7 @@ export default function EmailDomainPage({ webmailUrl, mailDomain }) {
             onEdit={setEditAccount}
             onDelete={handleDeleteAccount}
             onToggle={handleToggleAccount}
+            onAutoReply={setAutoReplyAccount}
           />
         </CollapsibleSection>
 
@@ -331,6 +347,15 @@ export default function EmailDomainPage({ webmailUrl, mailDomain }) {
           account={editAccount}
           onSave={handleEditAccount}
           onCancel={() => setEditAccount(null)}
+        />
+      )}
+
+      {/* Autoresponder Modal */}
+      {autoReplyAccount && (
+        <AutoResponder
+          account={autoReplyAccount}
+          onSave={handleSaveAutoReply}
+          onCancel={() => setAutoReplyAccount(null)}
         />
       )}
     </>
