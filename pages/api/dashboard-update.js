@@ -52,7 +52,7 @@ async function getVersionInfo() {
 async function runUpdate() {
   const steps = [
     { name: 'pull', label: 'Code aktualisieren', cmd: `cd ${DASHBOARD_DIR} && git pull origin main` },
-    { name: 'install', label: 'Dependencies installieren', cmd: `cd ${DASHBOARD_DIR} && ${BUN} install` },
+    { name: 'install', label: 'Dependencies installieren', cmd: `cd ${DASHBOARD_DIR} && mv .env .env.bak 2>/dev/null; ${BUN} install; EC=$?; mv .env.bak .env 2>/dev/null; exit $EC` },
     { name: 'build', label: 'Dashboard bauen', cmd: `cd ${DASHBOARD_DIR} && ${BUN} run build`, timeout: 600000 },
     { name: 'restart', label: 'Service neustarten', cmd: 'sudo systemctl restart admin-dashboard' }
   ]
