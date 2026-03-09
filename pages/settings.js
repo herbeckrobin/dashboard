@@ -120,7 +120,7 @@ export default function Settings() {
     const interval = setInterval(async () => {
       attempts++
       try {
-        const res = await fetch('/api/config', { method: 'HEAD' })
+        const res = await fetch('/api/config')
         if (res.ok) {
           clearInterval(interval)
           window.location.reload()
