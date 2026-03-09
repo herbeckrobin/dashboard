@@ -4,7 +4,7 @@ import { requireAuth } from '../../../../../lib/auth'
 import { getEmailDomain, updateEmailDomain, deleteEmailDomain } from '../../../../../lib/email/domains'
 import { getAccountsByDomain, deleteAccount } from '../../../../../lib/email/accounts'
 import { getAliasesByDomain, deleteAlias } from '../../../../../lib/email/aliases'
-import { regenerateMailConfigs } from '../../../../../lib/email/server'
+import { regenerateMailConfigs, getMailboxSize } from '../../../../../lib/email/server'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -16,8 +16,14 @@ export default async function handler(req, res) {
   // GET: Domain-Details mit Konten und Aliases
   if (req.method === 'GET') {
     const accounts = getAccountsByDomain(domain)
+    const accountsWithSize = await Promise.all(
+      accounts.map(async (a) => ({
+        ...a,
+        usedBytes: await getMailboxSize(a.domain, a.local)
+      }))
+    )
     const aliases = getAliasesByDomain(domain)
-    return res.json({ domain: emailDomain, accounts, aliases })
+    return res.json({ domain: emailDomain, accounts: accountsWithSize, aliases })
   }
 
   // PUT: Domain-Einstellungen aktualisieren
