@@ -7,6 +7,7 @@ import FileExplorer from '../../components/FileExplorer'
 import GitCloneBox from '../../components/GitCloneBox'
 import PasswordProtection from '../../components/PasswordProtection'
 import EnvVars from '../../components/EnvVars'
+import DnsCheck from '../../components/DnsCheck'
 import CollapsibleSection from '../../components/CollapsibleSection'
 import { useBreadcrumbs } from '../../hooks/useBreadcrumbs'
 
@@ -276,6 +277,13 @@ export default function EditProject() {
           {form.repo && (
             <CollapsibleSection title="Git Clone" defaultOpen={false}>
               <GitCloneBox repo={form.repo} />
+            </CollapsibleSection>
+          )}
+
+          {/* DNS-Eintraege */}
+          {id && form.domain && (
+            <CollapsibleSection title="DNS-Einträge" defaultOpen={false}>
+              <DnsCheck projectId={id} />
             </CollapsibleSection>
           )}
 
