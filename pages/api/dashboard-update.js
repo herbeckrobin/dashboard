@@ -70,6 +70,19 @@ async function runUpdate() {
     updateStatus.steps[i].status = 'running'
     updateStatus.steps[i].startedAt = new Date().toISOString()
 
+    // Restart-Step: Status vorher auf done setzen, dann verzoegert neustarten
+    if (steps[i].name === 'restart') {
+      updateStatus.steps[i].status = 'done'
+      updateStatus.steps[i].finishedAt = new Date().toISOString()
+      updateStatus.status = 'done'
+      updateStatus.finishedAt = new Date().toISOString()
+      // 2s warten damit das Frontend den done-Status noch pollen kann
+      setTimeout(() => {
+        runCommand(steps[i].cmd, steps[i].timeout || 300000)
+      }, 2000)
+      return
+    }
+
     const result = await runCommandLive(
       steps[i].cmd,
       steps[i].timeout || 300000,

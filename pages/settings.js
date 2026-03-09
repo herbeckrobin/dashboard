@@ -102,7 +102,13 @@ export default function Settings() {
           }
         }
       } catch {
-        // Server evtl. gerade im Neustart — weiter pollen
+        // Connection-Error nach Build = Server startet neu
+        const buildStep = updateSteps?.find(s => s.name === 'build' && s.status === 'done')
+        if (buildStep) {
+          clearInterval(interval)
+          setUpdateMessage({ type: 'success', text: 'Update erfolgreich — Seite wird neu geladen...' })
+          waitForRestart()
+        }
       }
     }, 2000)
     return interval
