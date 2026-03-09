@@ -3,6 +3,7 @@ import { requireAuth } from '../../lib/auth'
 import { runCommand, runCommandLive } from '../../lib/run-command'
 
 const DASHBOARD_DIR = '/home/deploy/apps/admin-dashboard'
+const BUN = '/home/deploy/.bun/bin/bun'
 
 // In-Memory Update-Status (wie Rules Audit Pattern)
 let updateStatus = null
@@ -51,8 +52,8 @@ async function getVersionInfo() {
 async function runUpdate() {
   const steps = [
     { name: 'pull', label: 'Code aktualisieren', cmd: `cd ${DASHBOARD_DIR} && git pull origin main` },
-    { name: 'install', label: 'Dependencies installieren', cmd: `cd ${DASHBOARD_DIR} && bun install` },
-    { name: 'build', label: 'Dashboard bauen', cmd: `cd ${DASHBOARD_DIR} && bun run build`, timeout: 600000 },
+    { name: 'install', label: 'Dependencies installieren', cmd: `cd ${DASHBOARD_DIR} && ${BUN} install` },
+    { name: 'build', label: 'Dashboard bauen', cmd: `cd ${DASHBOARD_DIR} && ${BUN} run build`, timeout: 600000 },
     { name: 'restart', label: 'Service neustarten', cmd: 'sudo systemctl restart admin-dashboard' }
   ]
 
