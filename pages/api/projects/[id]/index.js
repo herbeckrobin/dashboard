@@ -4,7 +4,7 @@ import { getConfig } from '../../../../lib/config'
 import { runCommand } from '../../../../lib/run-command'
 import { dropDatabase } from '../../../../lib/database'
 import { deletePerformanceData } from '../../../../lib/performance'
-import { validateProjectName, validateDomain, validatePreBuildCmd, validateGitSubPath, escapeShellArg } from '../../../../lib/validate'
+import { validateProjectName, validateDomain, validatePreBuildCmd, validateGitSubPath, validateCspDomains, escapeShellArg } from '../../../../lib/validate'
 
 export default async function handler(req, res) {
   if (!await requireAuth(req, res)) return
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Projekt nicht gefunden' })
     }
 
-    const { name, domain, type, repo, gitSubPath, uploadLimit, phpVersion, docRoot, frameworkInstalled, envVars, preBuildCmd, wwwAlias, performanceCheckEnabled, groupId } = req.body
+    const { name, domain, type, repo, gitSubPath, uploadLimit, phpVersion, docRoot, frameworkInstalled, envVars, preBuildCmd, wwwAlias, performanceCheckEnabled, groupId, cspWhitelist } = req.body
     const updates = {}
     if (name !== undefined) {
       const nameCheck = validateProjectName(name)
@@ -81,6 +81,16 @@ export default async function handler(req, res) {
     }
     if (groupId !== undefined) {
       updates.groupId = groupId || undefined
+    }
+    if (cspWhitelist !== undefined) {
+      const cleaned = Array.isArray(cspWhitelist)
+        ? cspWhitelist.map(d => String(d).trim()).filter(Boolean)
+        : []
+      if (cleaned.length > 0) {
+        const cspCheck = validateCspDomains(cleaned)
+        if (!cspCheck.valid) return res.status(400).json({ error: cspCheck.error })
+      }
+      updates.cspWhitelist = cleaned.length > 0 ? cleaned : undefined
     }
     const updated = updateProject(id, updates)
     return res.json({ success: true, project: updated })

@@ -57,7 +57,7 @@ export default function EditProject() {
   const router = useRouter()
   const { id } = router.query
 
-  const [form, setForm] = useState({ name: '', domain: '', type: 'php', repo: '', gitSubPath: '', uploadLimit: '', phpVersion: '8.2', docRoot: '', envVars: [], preBuildCmd: '', wwwAlias: false, performanceCheckEnabled: true, groupId: '' })
+  const [form, setForm] = useState({ name: '', domain: '', type: 'php', repo: '', gitSubPath: '', uploadLimit: '', phpVersion: '8.2', docRoot: '', envVars: [], preBuildCmd: '', wwwAlias: false, performanceCheckEnabled: true, groupId: '', cspWhitelist: [] })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deployHistory, setDeployHistory] = useState([])
@@ -90,7 +90,8 @@ export default function EditProject() {
             preBuildCmd: data.project.preBuildCmd || '',
             wwwAlias: data.project.wwwAlias || false,
             performanceCheckEnabled: data.project.performanceCheckEnabled !== false,
-            groupId: data.project.groupId || ''
+            groupId: data.project.groupId || '',
+            cspWhitelist: data.project.cspWhitelist || []
           })
         }
         setLoading(false)
@@ -222,6 +223,15 @@ export default function EditProject() {
                     </div>
                   </>
                 )}
+                <div>
+                  <label className="block text-sm font-medium mb-2">CSP Script-Whitelist <span className="text-gray-500 font-normal">(optional)</span></label>
+                  <textarea value={(form.cspWhitelist || []).join('\n')}
+                    onChange={e => setForm({...form, cspWhitelist: e.target.value.split('\n').map(d => d.trim()).filter(Boolean)})}
+                    placeholder={"z.B.\nanalytics.example.com\n*.umami.is"}
+                    rows={3}
+                    className="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" />
+                  <p className="text-gray-500 text-xs mt-1">Externe Domains die Scripts laden dürfen (eine pro Zeile, z.B. für Analytics). Wird beim nächsten Deploy aktiv.</p>
+                </div>
               </div>
             </CollapsibleSection>
 
