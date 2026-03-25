@@ -90,39 +90,32 @@ export default function NewProject() {
     setForm({ name: '', domain: '', type: 'nextjs', framework: null, gitMode: 'theme-only', databaseMode: 'auto', database: { name: '', user: '', password: '', host: 'localhost' }, aiDescription: '' })
   }
 
-  const handleCreateRepo = (e) => {
+  const [creatingRepo, setCreatingRepo] = useState(false)
+
+  const handleCreateRepo = async (e) => {
     e.preventDefault()
     setCreateError('')
-    // Optimistic: sofort Platzhalter-Repo einfuegen und auswaehlen
-    const slug = newRepo.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-    const optimisticRepo = { name: slug, full_name: `deploy/${slug}`, html_url: `http://localhost:3000/deploy/${slug}`, description: newRepo.description }
-    setRepos(prev => [...prev, optimisticRepo].sort((a, b) => a.full_name.localeCompare(b.full_name)))
-    handleSelectRepo(optimisticRepo)
+    setCreatingRepo(true)
     const repoData = { ...newRepo }
     setNewRepo({ name: '', description: '', isPrivate: true, autoInit: true })
-    // API im Hintergrund
-    fetch('/api/repos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(repoData)
-    })
-      .then(r => r.json().then(data => ({ ok: r.ok, data })))
-      .then(({ ok, data }) => {
-        if (!ok) {
-          alert('Fehler beim Repo-Erstellen: ' + (data.error || 'Unbekannter Fehler'))
-          setRepos(prev => prev.filter(r => r.full_name !== optimisticRepo.full_name))
-          handleDeselectRepo()
-          return
-        }
-        // Ersetze Platzhalter mit echtem Repo
-        setRepos(prev => prev.map(r => r.full_name === optimisticRepo.full_name ? data.repo : r))
-        setSelectedRepo(data.repo)
+    try {
+      const res = await fetch('/api/repos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(repoData)
       })
-      .catch(() => {
-        alert('Fehler beim Repo-Erstellen: Netzwerkfehler')
-        setRepos(prev => prev.filter(r => r.full_name !== optimisticRepo.full_name))
-        handleDeselectRepo()
-      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCreateError(data.error || 'Unbekannter Fehler')
+        return
+      }
+      setRepos(prev => [...prev, data.repo].sort((a, b) => a.full_name.localeCompare(b.full_name)))
+      handleSelectRepo(data.repo)
+    } catch {
+      setCreateError('Netzwerkfehler beim Repo-Erstellen')
+    } finally {
+      setCreatingRepo(false)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -375,8 +368,8 @@ export default function NewProject() {
                   {createError && (
                     <div className="bg-red-900/50 border border-red-500 rounded-lg p-3 text-red-300 text-sm">{createError}</div>
                   )}
-                  <button type="submit" disabled={!newRepo.name.trim()} className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 rounded-lg font-medium">
-                    Repository auf Gitea erstellen
+                  <button type="submit" disabled={!newRepo.name.trim() || creatingRepo} className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 rounded-lg font-medium">
+                    {creatingRepo ? 'Wird erstellt...' : 'Repository auf Gitea erstellen'}
                   </button>
                 </form>
               </div>
