@@ -143,6 +143,37 @@ function CronJobCard({ job, onSave, onDelete, onRun, runs }) {
                   <option value="POST">POST</option>
                 </select>
               </div>
+              {/* Custom Headers */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Custom Headers (optional)</label>
+                <div className="space-y-1">
+                  {(form.headers || []).map((h, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input type="text" value={h.key} placeholder="Key"
+                        onChange={e => {
+                          const updated = [...(form.headers || [])]
+                          updated[i] = { ...updated[i], key: e.target.value }
+                          update('headers', updated)
+                        }}
+                        className="bg-gray-700 rounded px-2 py-1.5 text-xs font-mono w-32 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <input type="text" value={h.value} placeholder="Value"
+                        onChange={e => {
+                          const updated = [...(form.headers || [])]
+                          updated[i] = { ...updated[i], value: e.target.value }
+                          update('headers', updated)
+                        }}
+                        className="bg-gray-700 rounded px-2 py-1.5 text-xs font-mono flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <button type="button" onClick={() => {
+                        update('headers', (form.headers || []).filter((_, j) => j !== i))
+                      }} className="text-red-400 hover:text-red-300 text-sm px-1">✕</button>
+                    </div>
+                  ))}
+                  {(form.headers || []).length < 10 && (
+                    <button type="button" onClick={() => update('headers', [...(form.headers || []), { key: '', value: '' }])}
+                      className="text-xs text-gray-400 hover:text-white">+ Header</button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

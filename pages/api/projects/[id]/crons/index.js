@@ -1,7 +1,7 @@
 // CRUD API fuer Projekt-Cronjobs
 import { requireAuth } from '../../../../../lib/auth'
 import { getProject, updateProject } from '../../../../../lib/db'
-import { validateCronSchedule, validateCronCommand, validateCronUrl, validateCronJobCount } from '../../../../../lib/validate'
+import { validateCronSchedule, validateCronCommand, validateCronUrl, validateCronHeaders, validateCronJobCount } from '../../../../../lib/validate'
 import { syncProjectCrons } from '../../../../../lib/cron-sync'
 import { getCronRuns } from '../../../../../lib/cron-log'
 
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     const countCheck = validateCronJobCount(existing.length)
     if (!countCheck.valid) return res.status(400).json({ error: countCheck.error })
 
-    const { name, type, schedule, command, url, httpMethod } = req.body
+    const { name, type, schedule, command, url, httpMethod, headers } = req.body
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'Name ist erforderlich' })
@@ -51,7 +51,15 @@ export default async function handler(req, res) {
       if (httpMethod && !['GET', 'POST'].includes(httpMethod)) {
         return res.status(400).json({ error: 'HTTP-Methode muss GET oder POST sein' })
       }
+      if (headers) {
+        const headersCheck = validateCronHeaders(headers)
+        if (!headersCheck.valid) return res.status(400).json({ error: headersCheck.error })
+      }
     }
+
+    const cleanHeaders = type === 'url' && Array.isArray(headers)
+      ? headers.filter(h => h.key && h.key.trim()).map(h => ({ key: h.key.trim(), value: (h.value || '').trim() }))
+      : null
 
     const cronJob = {
       id: `cj_${Date.now()}`,
@@ -61,6 +69,7 @@ export default async function handler(req, res) {
       command: type === 'command' ? command.trim() : null,
       url: type === 'url' ? url.trim() : null,
       httpMethod: type === 'url' ? (httpMethod || 'GET') : null,
+      headers: cleanHeaders,
       enabled: true,
       createdAt: new Date().toISOString(),
       lastRunAt: null,
@@ -74,7 +83,7 @@ export default async function handler(req, res) {
 
   // PUT — Cron-Job aktualisieren
   if (req.method === 'PUT') {
-    const { cronJobId, name, type, schedule, command, url, httpMethod, enabled } = req.body
+    const { cronJobId, name, type, schedule, command, url, httpMethod, headers, enabled } = req.body
     if (!cronJobId) return res.status(400).json({ error: 'cronJobId ist erforderlich' })
 
     const existing = project.cronJobs || []
@@ -125,6 +134,14 @@ export default async function handler(req, res) {
       job.httpMethod = httpMethod
     }
 
+    if (headers !== undefined) {
+      const headersCheck = validateCronHeaders(headers)
+      if (!headersCheck.valid) return res.status(400).json({ error: headersCheck.error })
+      job.headers = Array.isArray(headers)
+        ? headers.filter(h => h.key && h.key.trim()).map(h => ({ key: h.key.trim(), value: (h.value || '').trim() }))
+        : null
+    }
+
     if (enabled !== undefined) {
       job.enabled = !!enabled
     }
@@ -133,6 +150,7 @@ export default async function handler(req, res) {
     if (job.type === 'command') {
       job.url = null
       job.httpMethod = null
+      job.headers = null
     } else {
       job.command = null
     }

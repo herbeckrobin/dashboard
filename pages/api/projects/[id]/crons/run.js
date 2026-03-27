@@ -51,10 +51,16 @@ export default async function handler(req, res) {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), URL_TIMEOUT)
       try {
+        const customHeaders = {}
+        if (Array.isArray(job.headers)) {
+          for (const h of job.headers) {
+            if (h.key && h.value) customHeaders[h.key] = h.value
+          }
+        }
         const fetchOptions = {
           method: job.httpMethod || 'GET',
           signal: controller.signal,
-          headers: { 'User-Agent': 'Dashboard-Cron/1.0' },
+          headers: { 'User-Agent': 'Dashboard-Cron/1.0', ...customHeaders },
         }
         const response = await fetch(job.url, fetchOptions)
         const body = await response.text()
