@@ -226,7 +226,8 @@ export default function EditProject() {
                 <div>
                   <label className="block text-sm font-medium mb-2">CSP Script-Whitelist <span className="text-gray-500 font-normal">(optional)</span></label>
                   <textarea value={(form.cspWhitelist || []).join('\n')}
-                    onChange={e => setForm({...form, cspWhitelist: e.target.value.split('\n').map(d => d.trim()).filter(Boolean)})}
+                    onChange={e => setForm({...form, cspWhitelist: e.target.value.split('\n')})}
+                    onBlur={e => setForm(f => ({...f, cspWhitelist: f.cspWhitelist.map(d => d.trim()).filter(Boolean)}))}
                     placeholder={"z.B.\nanalytics.example.com\n*.umami.is"}
                     rows={3}
                     className="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" />
