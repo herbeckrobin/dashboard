@@ -6,6 +6,7 @@ import Link from 'next/link'
 import FileExplorer from '../../components/FileExplorer'
 import GitCloneBox from '../../components/GitCloneBox'
 import PasswordProtection from '../../components/PasswordProtection'
+import CronJobs from '../../components/CronJobs'
 import EnvVars from '../../components/EnvVars'
 import DnsCheck from '../../components/DnsCheck'
 import CollapsibleSection from '../../components/CollapsibleSection'
@@ -432,6 +433,13 @@ export default function EditProject() {
               </div>
             )}
           </CollapsibleSection>
+
+          {/* Cron-Jobs */}
+          {id && (
+            <CollapsibleSection title="Cron-Jobs" defaultOpen={false}>
+              <CronJobs projectId={id} />
+            </CollapsibleSection>
+          )}
 
           {/* Passwort-Schutz */}
           {id && (

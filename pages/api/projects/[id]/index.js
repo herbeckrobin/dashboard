@@ -4,6 +4,8 @@ import { getConfig } from '../../../../lib/config'
 import { runCommand } from '../../../../lib/run-command'
 import { dropDatabase } from '../../../../lib/database'
 import { deletePerformanceData } from '../../../../lib/performance'
+import { removeProjectCrons } from '../../../../lib/cron-sync'
+import { deleteCronLogs } from '../../../../lib/cron-log'
 import { validateProjectName, validateDomain, validatePreBuildCmd, validateGitSubPath, validateCspDomains, escapeShellArg } from '../../../../lib/validate'
 
 export default async function handler(req, res) {
@@ -153,7 +155,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // 6. Aus Datenbank loeschen
+    // 6. Cron-Jobs entfernen
+    await removeProjectCrons(id)
+    deleteCronLogs(id)
+
+    // 7. Aus Datenbank loeschen
     const deleted = deleteProject(id)
     return res.json({ success: true, project: deleted })
   }
